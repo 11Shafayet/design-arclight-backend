@@ -2,34 +2,23 @@ import mongoose from 'mongoose';
 import app from './app.js';
 import config from './config/index.js';
 
-let server;
+let isConnected = false; // Track database connection status
 
-async function main() {
+export default async function handler(req, res) {
   try {
-    await mongoose.connect(config.database_url);
-    console.log(`${config.database_url} is connected`);
+    // Connect to MongoDB if not already connected
+    if (!isConnected) {
+      await mongoose.connect(config.database_url, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      isConnected = true;
+    }
 
-    server = app.listen(config.port, () => {
-      console.log(`app is listening on port ${config.port}`);
-    });
+    // Use Express app to handle requests
+    app(req, res);
   } catch (err) {
-    console.log(err);
+    console.error('Serverless function error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 }
-
-main();
-
-process.on('unhandledRejection', (err) => {
-  console.log(`unahandledRejection is detected , shutting down ...`, err);
-  if (server) {
-    server.close(() => {
-      process.exit(1);
-    });
-  }
-  process.exit(1);
-});
-
-process.on('uncaughtException', () => {
-  console.log(`uncaughtException is detected , shutting down ...`);
-  process.exit(1);
-});
