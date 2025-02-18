@@ -2,23 +2,30 @@ import mongoose from 'mongoose';
 import app from './app.js';
 import config from './config/index.js';
 
-let isConnected = false; // Track database connection status
+let isConnected = false; // Track connection status
 
-export default async function handler(req, res) {
-  try {
-    // Connect to MongoDB if not already connected
-    if (!isConnected) {
+async function connectDB() {
+  if (!isConnected) {
+    try {
       await mongoose.connect(config.database_url, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
       });
       isConnected = true;
+      console.log('MongoDB Connected!');
+    } catch (error) {
+      console.error('MongoDB Connection Failed', error);
+      throw error;
     }
+  }
+}
 
-    // Use Express app to handle requests
-    app(req, res);
+export default async function handler(req, res) {
+  try {
+    await connectDB(); // Only connect once
+    app(req, res); // Pass request to Express app
   } catch (err) {
-    console.error('Serverless function error:', err);
+    console.error('Server error:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 }
