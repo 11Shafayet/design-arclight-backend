@@ -2,30 +2,33 @@ import mongoose from 'mongoose';
 import app from './app.js';
 import config from './config/index.js';
 
-let isConnected = false; // Track connection status
+let server;
 
-async function connectDB() {
-  if (!isConnected) {
-    try {
-      await mongoose.connect(config.database_url, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      });
-      isConnected = true;
-      console.log('MongoDB Connected!');
-    } catch (error) {
-      console.error('MongoDB Connection Failed', error);
-      throw error;
-    }
-  }
-}
-
-export default async function handler(req, res) {
+async function main() {
   try {
-    await connectDB(); // Only connect once
-    app(req, res); // Pass request to Express app
+    await mongoose.connect(config.database_url);
+
+    server = app.listen(config.port, () => {
+      console.log(`app is listening on port ${config.port}`);
+    });
   } catch (err) {
-    console.error('Server error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.log(err);
   }
 }
+
+main();
+
+process.on('unhandledRejection', (err) => {
+  console.log(`unahandledRejection is detected , shutting down ...`, err);
+  if (server) {
+    server.close(() => {
+      process.exit(1);
+    });
+  }
+  process.exit(1);
+});
+
+process.on('uncaughtException', () => {
+  console.log(`uncaughtException is detected , shutting down ...`);
+  process.exit(1);
+});
