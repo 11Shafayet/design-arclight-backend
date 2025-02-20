@@ -10,6 +10,7 @@
 // vibe: ['','',]
 
 import { Projects } from './projects.model.js';
+import cloudinary from 'cloudinary';
 
 const createProject = async (data) => {
   try {
@@ -57,8 +58,21 @@ const updateProject = async (id, data) => {
 
 const deleteProject = async (id) => {
   try {
+    const project = await Projects.findById(id);
+    if (!project) throw new Error('Project not found');
+
+    await Promise.all([
+      cloudinary.v2.uploader.destroy(project.bannerImage),
+      cloudinary.v2.uploader.destroy(project.mainImage),
+      ...project.topImages.map((image) =>
+        cloudinary.v2.uploader.destroy(image)
+      ),
+      ...project.bottomImages.map((image) =>
+        cloudinary.v2.uploader.destroy(image)
+      ),
+    ]);
+
     const deletedProject = await Projects.findByIdAndDelete(id);
-    if (!deletedProject) throw new Error('Project not found');
     return deletedProject;
   } catch (error) {
     throw new Error(error.message || 'Failed to delete project');

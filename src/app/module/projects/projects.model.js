@@ -4,8 +4,8 @@ import { Schema, model } from 'mongoose';
 // desc: '',
 // bannerImage,
 // main image,
-// top images = [], // 3 image
-// bottom images = [],
+// top images = [], // 3 images
+// bottom images = [], // 7 images
 // category: '',
 // study: '',
 // platform: '',
@@ -39,6 +39,7 @@ const projectsSchema = new Schema(
     },
     category: {
       type: String,
+      enum: ['branding', 'custom-website', 'website-in-a-day'],
       required: true,
     },
     study: {
