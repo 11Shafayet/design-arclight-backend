@@ -7,28 +7,29 @@ let server;
 async function main() {
   try {
     await mongoose.connect(config.database_url);
-
     server = app.listen(config.port, () => {
-      console.log(`app is listening on port ${config.port}`);
+      console.log(`App is listening on port ${config.port}`);
     });
   } catch (err) {
-    console.log(err);
+    console.error('Database connection failed:', err);
+    process.exit(1);
   }
 }
 
 main();
 
+// 🔹 Handle Unhandled Promise Rejections
 process.on('unhandledRejection', (err) => {
-  console.log(`unahandledRejection is detected , shutting down ...`, err);
+  console.error('Unhandled Rejection is detected, shutting down...', err);
   if (server) {
-    server.close(() => {
-      process.exit(1);
-    });
+    server.close(() => process.exit(1));
+  } else {
+    process.exit(1);
   }
-  process.exit(1);
 });
 
-process.on('uncaughtException', () => {
-  console.log(`uncaughtException is detected , shutting down ...`);
+// 🔹 Handle Uncaught Exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception is detected, shutting down...', err);
   process.exit(1);
 });

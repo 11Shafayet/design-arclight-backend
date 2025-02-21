@@ -1,72 +1,35 @@
 import cors from 'cors';
 import express from 'express';
+import timeout from 'connect-timeout';
 import routes from './app/routes/index.js';
 import notFound from './app/middlewares/notFound.js';
 
 const app = express();
 
-// Enable CORS properly
-const allowedOrigins = ['http://localhost:5173', 'https://designarclight.com'];
+// 1️⃣ Global Middleware
+app.use(timeout('600s')); // Set request timeout
+app.use(express.json());
 
+// 2️⃣ CORS Configuration
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: ['http://localhost:5173', 'https://designarclight.com'],
     credentials: true,
-    methods: 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Authorization',
   })
 );
 
-// Parsers
-app.use(express.json());
-
-// Handle Preflight Requests Manually (Optional, but recommended)
-app.options('*', cors());
-
+// 3️⃣ API Routes
 app.use('/api', routes);
 
-app.get('/', (req, res) => {
-  res.send('Server is running!');
-});
-
-// Not Found Middleware
+// 4️⃣ Not Found Handler
 app.use(notFound);
 
+// 5️⃣ Global Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res
+    .status(err.status || 500)
+    .json({ message: err.message || 'Internal Server Error' });
+});
+
 export default app;
-
-// import cors from 'cors';
-// import express from 'express';
-// import routes from './app/routes/index.js';
-// import notFound from './app/middlewares/notFound.js';
-
-// const app = express();
-
-// // Parsers
-// app.use(express.json());
-// app.use((req, res, next) => {
-//   res.header('Access-Control-Allow-Origin', req.headers.origin); // Dynamically allow origins
-//   res.header('Access-Control-Allow-Credentials', 'true');
-//   res.header(
-//     'Access-Control-Allow-Methods',
-//     'GET,POST,PUT,PATCH,DELETE,OPTIONS'
-//   );
-//   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-//   next();
-// });
-
-// app.use('/api', routes);
-
-// app.get('/', (req, res) => {
-//   res.send('Server is running!');
-// });
-
-// // Not Found
-// app.use(notFound);
-
-// export default app;
