@@ -50,27 +50,41 @@ const updateProject = async (id, data) => {
     const project = await Projects.findById(id);
     if (!project) throw new Error('Project not found');
 
-    // Handle image updates
+    // Handle image updates only if new data is provided
     if (data.bannerImage && data.bannerImage !== project.bannerImage) {
       await cloudinary.v2.uploader.destroy(project.bannerImage);
+    } else {
+      delete data.bannerImage; // Prevent overwriting with null
     }
+
     if (data.showImage && data.showImage !== project.showImage) {
       await cloudinary.v2.uploader.destroy(project.showImage);
+    } else {
+      delete data.showImage; // Prevent overwriting with null
     }
+
     if (data.mainImage && data.mainImage !== project.mainImage) {
       await cloudinary.v2.uploader.destroy(project.mainImage);
+    } else {
+      delete data.mainImage; // Prevent overwriting with null
     }
+
     if (data.topImages && data.topImages.length > 0) {
       await Promise.all(
         project.topImages.map((image) => cloudinary.v2.uploader.destroy(image))
       );
+    } else {
+      delete data.topImages; // Prevent overwriting with null
     }
+
     if (data.bottomImages && data.bottomImages.length > 0) {
       await Promise.all(
         project.bottomImages.map((image) =>
           cloudinary.v2.uploader.destroy(image)
         )
       );
+    } else {
+      delete data.bottomImages; // Prevent overwriting with null
     }
 
     const updatedProject = await Projects.findByIdAndUpdate(id, data, {
