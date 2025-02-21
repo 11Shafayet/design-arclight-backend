@@ -11,40 +11,57 @@
 // vibe: ['','',]
 
 import { Projects } from './projects.model.js';
-import cloudinary from 'cloudinary';
+import cloudinary from '../../../config/cloudinary.js'; // Ensure correct path to Cloudinary config
 
-const createProject = async (data) => {
+const uploadToCloudinary = async (fileBuffer, folder = 'projects') => {
+  if (!fileBuffer) return null; // Skip upload if no file
+
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.public_id); // Return only public_id
+      }
+    );
+
+    uploadStream.end(fileBuffer); // Upload file buffer
+  });
+};
+
+const deleteFromCloudinary = async (publicId) => {
+  if (!publicId) return; // Skip if no public ID
+
   try {
-    if (!data) {
-      throw new Error('Project data is required');
-    }
+    await cloudinary.uploader.destroy(publicId);
+  } catch (error) {
+    console.error(`Failed to delete image: ${publicId}`, error);
+  }
+};
 
-    // Upload images to Cloudinary and get public_ids
-    if (data.bannerImage) {
-      const uploadResult = await cloudinary.v2.uploader.upload(
-        data.bannerImage
+const createProject = async (data, files) => {
+  try {
+    if (!data) throw new Error('Project data is required');
+
+    // Upload images if available
+    if (files.bannerImage) {
+      data.bannerImage = await uploadToCloudinary(files.bannerImage[0].buffer);
+    }
+    if (files.showImage) {
+      data.showImage = await uploadToCloudinary(files.showImage[0].buffer);
+    }
+    if (files.mainImage) {
+      data.mainImage = await uploadToCloudinary(files.mainImage[0].buffer);
+    }
+    if (files.topImages) {
+      data.topImages = await Promise.all(
+        files.topImages.map((file) => uploadToCloudinary(file.buffer))
       );
-      data.bannerImage = uploadResult.public_id; // Store public_id
     }
-    if (data.showImage) {
-      const uploadResult = await cloudinary.v2.uploader.upload(data.showImage);
-      data.showImage = uploadResult.public_id; // Store public_id
-    }
-    if (data.mainImage) {
-      const uploadResult = await cloudinary.v2.uploader.upload(data.mainImage);
-      data.mainImage = uploadResult.public_id; // Store public_id
-    }
-    if (data.topImages && data.topImages.length > 0) {
-      const uploadResults = await Promise.all(
-        data.topImages.map((image) => cloudinary.v2.uploader.upload(image))
+    if (files.bottomImages) {
+      data.bottomImages = await Promise.all(
+        files.bottomImages.map((file) => uploadToCloudinary(file.buffer))
       );
-      data.topImages = uploadResults.map((result) => result.public_id); // Store public_ids
-    }
-    if (data.bottomImages && data.bottomImages.length > 0) {
-      const uploadResults = await Promise.all(
-        data.bottomImages.map((image) => cloudinary.v2.uploader.upload(image))
-      );
-      data.bottomImages = uploadResults.map((result) => result.public_id); // Store public_ids
     }
 
     const project = new Projects(data);
@@ -73,58 +90,44 @@ const getProject = async (id) => {
   }
 };
 
-const updateProject = async (id, data) => {
+const updateProject = async (id, data, files) => {
   try {
     const project = await Projects.findById(id);
     if (!project) throw new Error('Project not found');
 
-    // Handle image updates only if new data is provided
-    if (data.bannerImage && data.bannerImage !== project.bannerImage) {
-      await cloudinary.v2.uploader.destroy(project.bannerImage);
-      const uploadResult = await cloudinary.v2.uploader.upload(
-        data.bannerImage
-      );
-      data.bannerImage = uploadResult.public_id; // Update to new public_id
+    // Handle image updates
+    if (files.bannerImage) {
+      await deleteFromCloudinary(project.bannerImage);
+      data.bannerImage = await uploadToCloudinary(files.bannerImage[0].buffer);
     }
 
-    if (data.showImage && data.showImage !== project.showImage) {
-      await cloudinary.v2.uploader.destroy(project.showImage);
-      const uploadResult = await cloudinary.v2.uploader.upload(data.showImage);
-      data.showImage = uploadResult.public_id; // Update to new public_id
+    if (files.showImage) {
+      await deleteFromCloudinary(project.showImage);
+      data.showImage = await uploadToCloudinary(files.showImage[0].buffer);
     }
 
-    if (data.mainImage && data.mainImage !== project.mainImage) {
-      await cloudinary.v2.uploader.destroy(project.mainImage);
-      const uploadResult = await cloudinary.v2.uploader.upload(data.mainImage);
-      data.mainImage = uploadResult.public_id; // Update to new public_id
+    if (files.mainImage) {
+      await deleteFromCloudinary(project.mainImage);
+      data.mainImage = await uploadToCloudinary(files.mainImage[0].buffer);
     }
 
-    if (data.topImages && data.topImages.length > 0) {
-      await Promise.all(
-        project.topImages.map((image) => cloudinary.v2.uploader.destroy(image))
+    if (files.topImages) {
+      await Promise.all(project.topImages.map(deleteFromCloudinary));
+      data.topImages = await Promise.all(
+        files.topImages.map((file) => uploadToCloudinary(file.buffer))
       );
-      const uploadResults = await Promise.all(
-        data.topImages.map((image) => cloudinary.v2.uploader.upload(image))
-      );
-      data.topImages = uploadResults.map((result) => result.public_id); // Update to new public_ids
     }
 
-    if (data.bottomImages && data.bottomImages.length > 0) {
-      await Promise.all(
-        project.bottomImages.map((image) =>
-          cloudinary.v2.uploader.destroy(image)
-        )
+    if (files.bottomImages) {
+      await Promise.all(project.bottomImages.map(deleteFromCloudinary));
+      data.bottomImages = await Promise.all(
+        files.bottomImages.map((file) => uploadToCloudinary(file.buffer))
       );
-      const uploadResults = await Promise.all(
-        data.bottomImages.map((image) => cloudinary.v2.uploader.upload(image))
-      );
-      data.bottomImages = uploadResults.map((result) => result.public_id); // Update to new public_ids
     }
 
     const updatedProject = await Projects.findByIdAndUpdate(id, data, {
       new: true,
     });
-    if (!updatedProject) throw new Error('Project not found');
     return updatedProject;
   } catch (error) {
     throw new Error(error.message || 'Failed to update project');
@@ -136,30 +139,18 @@ const deleteProject = async (id) => {
     const project = await Projects.findById(id);
     if (!project) throw new Error('Project not found');
 
-    const publicIds = [
-      project.bannerImage,
-      project.showImage,
-      project.mainImage,
-      ...project.topImages,
-      ...project.bottomImages,
-    ].map((imagePath) => {
-      // Extract public_id from the image path
-      const parts = imagePath.split('/');
-      return parts[parts.length - 1].split('.')[0]; // Get the last part and remove the extension
-    });
+    // Delete all images from Cloudinary
+    await Promise.all([
+      deleteFromCloudinary(project.bannerImage),
+      deleteFromCloudinary(project.showImage),
+      deleteFromCloudinary(project.mainImage),
+      ...project.topImages.map(deleteFromCloudinary),
+      ...project.bottomImages.map(deleteFromCloudinary),
+    ]);
 
-    await Promise.all(
-      publicIds.map((publicId) => cloudinary.v2.uploader.destroy(publicId))
-    );
-
-    const deletedProject = await Projects.findByIdAndDelete(id);
-    return deletedProject;
-  } catch (cloudinaryError) {
-    console.error(
-      'Error deleting images from Cloudinary:',
-      cloudinaryError // Log the entire error object
-    );
-    throw new Error('Failed to delete images from Cloudinary');
+    return await Projects.findByIdAndDelete(id);
+  } catch (error) {
+    throw new Error(error.message || 'Failed to delete project');
   }
 };
 
