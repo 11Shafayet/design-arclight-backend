@@ -8,6 +8,7 @@ router.post(
   '/',
   upload.fields([
     { name: 'bannerImage', maxCount: 1 },
+    { name: 'showImage', maxCount: 1 },
     { name: 'mainImage', maxCount: 1 },
     { name: 'topImages', maxCount: 3 },
     { name: 'bottomImages', maxCount: 7 },
@@ -22,6 +23,7 @@ router.patch(
   '/:id',
   upload.fields([
     { name: 'bannerImage', maxCount: 1 },
+    { name: 'showImage', maxCount: 1 },
     { name: 'mainImage', maxCount: 1 },
     { name: 'topImages', maxCount: 3 },
     { name: 'bottomImages', maxCount: 7 },

@@ -6,6 +6,7 @@ const buildProjectData = (req) => ({
   title: req.body.title,
   desc: req.body.desc,
   bannerImage: req.files?.bannerImage ? req.files.bannerImage[0].path : null,
+  showImage: req.files?.showImage ? req.files.showImage[0].path : null,
   mainImage: req.files?.mainImage ? req.files.mainImage[0].path : null,
   topImages: req.files?.topImages
     ? req.files.topImages.map((file) => file.path)
