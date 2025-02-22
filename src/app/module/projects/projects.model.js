@@ -55,7 +55,7 @@ const projectsSchema = new Schema(
       required: true,
     },
     vibe: {
-      type: [String],
+      type: String,
       required: true,
     },
   },

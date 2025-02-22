@@ -12,7 +12,7 @@ const createProject = async (req, res) => {
       category,
       study,
       platform,
-      vibe: vibe ? vibe.split(',') : [],
+      vibe,
     };
 
     const result = await ProjectsServices.createProject(projectData, req.files);
