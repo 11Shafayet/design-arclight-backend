@@ -3,6 +3,7 @@ import express from 'express';
 import timeout from 'connect-timeout';
 import routes from './app/routes/index.js';
 import notFound from './app/middlewares/notFound.js';
+import sendEmail from './emailService.js';
 
 const app = express();
 
